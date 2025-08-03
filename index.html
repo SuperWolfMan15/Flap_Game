@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FlapiX</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: skyblue;
+      overflow: hidden;
+      touch-action: manipulation;
+    }
+    canvas {
+      display: block;
+    }
+    #modal {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #ffe4c4;
+      padding: 20px;
+      border-radius: 20px;
+      box-shadow: 0 0 20px #00000055;
+      text-align: center;
+      display: none;
+      z-index: 999;
+      font-family: sans-serif;
+    }
+    #modal button {
+      margin-top: 10px;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 10px;
+      background-color: #ff8c00;
+      color: white;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <div id="modal">
+    <h2>Игра окончена!</h2>
+    <p id="score"></p>
+    <button onclick="restart()">Играть снова</button>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    let width = window.innerWidth;
+    let height = window.innerHeight;
+    canvas.width = width;
+    canvas.height = height;
+
+    let bird = { x: 80, y: 150, vy: 0, size: 20 };
+    let pipes = [];
+    let gravity = 0.6;
+    let jump = -10;
+    let score = 0;
+    let gameOver = false;
+    let started = false;
+
+    function drawBird() {
+      ctx.fillStyle = "yellow";
+      ctx.beginPath();
+      ctx.arc(bird.x, bird.y, bird.size, 0, Math.PI * 2);
+      ctx.fill();
+
+      // клюв
+      ctx.fillStyle = "orange";
+      ctx.beginPath();
+      ctx.moveTo(bird.x + bird.size, bird.y);
+      ctx.lineTo(bird.x + bird.size + 10, bird.y - 5);
+      ctx.lineTo(bird.x + bird.size + 10, bird.y + 5);
+      ctx.closePath();
+      ctx.fill();
+
+      // глаз
+      ctx.fillStyle = "black";
+      ctx.beginPath();
+      ctx.arc(bird.x + 7, bird.y - 5, 5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "white";
+      ctx.beginPath();
+      ctx.arc(bird.x + 7, bird.y - 5, 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function drawPipes() {
+      ctx.fillStyle = "green";
+      pipes.forEach(p => {
+        ctx.fillRect(p.x, 0, 50, p.top);
+        ctx.fillRect(p.x, p.top + 160, 50, height); // увеличенный проход
+      });
+    }
+
+    function update() {
+      if (!started || gameOver) return;
+
+      bird.vy += gravity;
+      bird.y += bird.vy;
+
+      if (bird.y + bird.size > height || bird.y - bird.size < 0) {
+        endGame();
+      }
+
+      pipes.forEach(p => {
+        p.x -= 3;
+
+        if (!p.passed && p.x + 50 < bird.x) {
+          score++;
+          p.passed = true;
+        }
+
+        if (
+          bird.x + bird.size > p.x &&
+          bird.x - bird.size < p.x + 50 &&
+          (bird.y - bird.size < p.top || bird.y + bird.size > p.top + 160) // проверка по увеличенному проходу
+        ) {
+          endGame();
+        }
+      });
+
+      if (pipes.length && pipes[0].x < -60) pipes.shift();
+
+      if (pipes.length === 0 || pipes[pipes.length - 1].x < width - 200) {
+        const top = Math.random() * (height - 200);
+        pipes.push({ x: width, top: top, passed: false });
+      }
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, width, height);
+      drawBird();
+      drawPipes();
+    }
+
+    function loop() {
+      update();
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    function flap() {
+      if (gameOver) return;
+      started = true;
+      bird.vy = jump;
+    }
+
+    function endGame() {
+      gameOver = true;
+      document.getElementById("modal").style.display = "block";
+      document.getElementById("score").innerText = `Счёт: ${score}`;
+    }
+
+    function restart() {
+      bird = { x: 80, y: 150, vy: 0, size: 20 };
+      pipes = [];
+      score = 0;
+      gameOver = false;
+      started = false;
+      document.getElementById("modal").style.display = "none";
+    }
+
+    window.addEventListener("touchstart", flap);
+    loop();
+  </script>
+</body>
+  </html>
